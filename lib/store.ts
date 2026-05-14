@@ -37,11 +37,18 @@ type ArticleInput = Omit<Article, "id" | "created_at" | "updated_at"> &
 type BatchInput = Omit<Batch, "id" | "created_at" | "updated_at"> &
   Partial<Pick<Batch, "id" | "created_at" | "updated_at">>;
 
-const dataDir =
-  process.env.BLOGFACTORY_DATA_DIR ||
-  (process.env.NODE_ENV === "production"
-    ? path.resolve(process.cwd(), "..", "data")
-    : path.resolve(process.cwd(), "data"));
+function resolveDataDir() {
+  if (process.env.BLOGFACTORY_DATA_DIR) return process.env.BLOGFACTORY_DATA_DIR;
+  if (process.env.NODE_ENV !== "production") return path.resolve(process.cwd(), "data");
+
+  const cwd = process.cwd();
+  if (path.basename(path.dirname(cwd)) === "releases") {
+    return path.resolve(cwd, "..", "..", "data");
+  }
+  return path.resolve(cwd, "..", "data");
+}
+
+const dataDir = resolveDataDir();
 
 const dbPath = path.join(dataDir, "blogfactory.json");
 let writeQueue = Promise.resolve();
