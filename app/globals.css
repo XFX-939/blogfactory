@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 30% 98%;
+  --foreground: 215 25% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 215 25% 15%;
+  --primary: 188 86% 32%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 20% 92%;
+  --secondary-foreground: 215 25% 18%;
+  --muted: 210 20% 94%;
+  --muted-foreground: 215 10% 42%;
+  --accent: 36 90% 62%;
+  --accent-foreground: 24 40% 16%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 18% 86%;
+  --input: 214 18% 86%;
+  --ring: 188 86% 32%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 220 20% 9%;
+  --foreground: 210 28% 94%;
+  --card: 220 18% 12%;
+  --card-foreground: 210 28% 94%;
+  --primary: 186 78% 42%;
+  --primary-foreground: 190 35% 8%;
+  --secondary: 218 14% 19%;
+  --secondary-foreground: 210 28% 94%;
+  --muted: 218 14% 17%;
+  --muted-foreground: 214 12% 68%;
+  --accent: 38 85% 60%;
+  --accent-foreground: 28 35% 12%;
+  --destructive: 0 62% 44%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 218 13% 24%;
+  --input: 218 13% 24%;
+  --ring: 186 78% 42%;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+textarea,
+input,
+select {
+  font-size: 16px;
+}
