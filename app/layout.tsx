@@ -8,7 +8,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Felix Blog Factory",
-  description: "个人博客文章生产工作台"
+  description: "个人博客文章生产工作台",
+  icons: {
+    icon: "/favicon.svg"
+  }
 };
 
 export default function RootLayout({
