@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { deleteArticle, getArticle, updateArticle } from "@/lib/store";
 import { slugify } from "@/lib/utils";
 
 export async function GET(
@@ -8,14 +8,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase
-      .from("articles")
-      .select("*")
-      .eq("id", id)
-      .single();
-    if (error) throw error;
-    return NextResponse.json({ article: data });
+    const article = await getArticle(id);
+    if (!article) throw new Error("文章不存在。");
+    return NextResponse.json({ article });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "文章加载失败" },
@@ -31,20 +26,11 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const supabase = getSupabaseAdmin();
     const updates = {
       ...body,
-      slug: body.title ? slugify(body.title) : body.slug,
-      updated_at: new Date().toISOString()
+      slug: body.title ? slugify(body.title) : body.slug
     };
-    const { data, error } = await supabase
-      .from("articles")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw error;
-    return NextResponse.json({ article: data });
+    return NextResponse.json({ article: await updateArticle(id, updates) });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "文章保存失败" },
@@ -59,9 +45,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from("articles").delete().eq("id", id);
-    if (error) throw error;
+    await deleteArticle(id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(

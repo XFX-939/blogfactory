@@ -68,7 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-2">
               <div className="hidden rounded-md border px-3 py-1.5 text-xs text-muted-foreground sm:block">
-                Supabase + OpenAI-compatible LLM
+                Local Storage + OpenAI-compatible LLM
               </div>
               <Button
                 variant="outline"

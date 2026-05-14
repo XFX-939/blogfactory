@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getArticle, updateArticle } from "@/lib/store";
 
 function frontmatterValue(value: string | null | undefined) {
   return JSON.stringify(value || "");
@@ -11,13 +11,8 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase
-      .from("articles")
-      .select("*")
-      .eq("id", id)
-      .single();
-    if (error) throw error;
+    const data = await getArticle(id);
+    if (!data) throw new Error("文章不存在。");
 
     const markdown = `---
 title: ${frontmatterValue(data.title)}
@@ -30,10 +25,7 @@ updated_at: ${frontmatterValue(data.updated_at)}
 
 ${data.content || ""}`;
 
-    await supabase
-      .from("articles")
-      .update({ status: "exported", updated_at: new Date().toISOString() })
-      .eq("id", id);
+    await updateArticle(id, { status: "exported" });
 
     return new NextResponse(markdown, {
       headers: {

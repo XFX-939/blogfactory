@@ -1,43 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DEFAULT_PROMPTS } from "@/lib/default-prompts";
 import {
   generateArticle,
   generateOutline,
   promptFallback,
   reviewArticle
 } from "@/lib/llm";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { createArticle, createGenerationLog, getPromptMap } from "@/lib/store";
 import { slugify } from "@/lib/utils";
-
-async function logStep(input: {
-  batch_id: string;
-  article_id?: string;
-  step: string;
-  status: string;
-  message: string;
-  raw_response?: string;
-}) {
-  const supabase = getSupabaseAdmin();
-  await supabase.from("generation_logs").insert(input);
-}
-
-async function loadPromptMap() {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase.from("prompts").select("key, content");
-  const map = new Map<string, string>();
-  for (const prompt of DEFAULT_PROMPTS) map.set(prompt.key, prompt.content);
-  for (const prompt of data || []) map.set(prompt.key, prompt.content);
-  return map;
-}
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const supabase = getSupabaseAdmin();
   const batchId = body.batch_id as string;
   const topic = body.topic as string;
 
   try {
-    const prompts = await loadPromptMap();
+    const prompts = await getPromptMap();
     const common = {
       topic,
       material: body.material || "",
@@ -48,14 +25,14 @@ export async function POST(request: NextRequest) {
       globalPrompt: prompts.get("global_style") || promptFallback("global_style")
     };
 
-    await logStep({
+    await createGenerationLog({
       batch_id: batchId,
       step: "生成大纲",
       status: "running",
       message: `开始生成《${topic}》的大纲`
     });
     const outline = await generateOutline(common);
-    await logStep({
+    await createGenerationLog({
       batch_id: batchId,
       step: "生成大纲",
       status: "success",
@@ -63,7 +40,7 @@ export async function POST(request: NextRequest) {
       raw_response: outline
     });
 
-    await logStep({
+    await createGenerationLog({
       batch_id: batchId,
       step: "生成正文",
       status: "running",
@@ -75,7 +52,7 @@ export async function POST(request: NextRequest) {
       generationPrompt:
         prompts.get("article_generation") || promptFallback("article_generation")
     });
-    await logStep({
+    await createGenerationLog({
       batch_id: batchId,
       step: "生成正文",
       status: "success",
@@ -83,7 +60,7 @@ export async function POST(request: NextRequest) {
       raw_response: JSON.stringify(article)
     });
 
-    await logStep({
+    await createGenerationLog({
       batch_id: batchId,
       step: "质量评分",
       status: "running",
@@ -97,7 +74,7 @@ export async function POST(request: NextRequest) {
       sensitivePrompt:
         prompts.get("sensitive_check") || promptFallback("sensitive_check")
     });
-    await logStep({
+    await createGenerationLog({
       batch_id: batchId,
       step: "质量评分",
       status: "success",
@@ -105,36 +82,31 @@ export async function POST(request: NextRequest) {
       raw_response: JSON.stringify(review)
     });
 
-    await logStep({
+    await createGenerationLog({
       batch_id: batchId,
       step: "保存",
       status: "running",
-      message: "保存文章到 Supabase"
+      message: "保存文章到本地数据文件"
     });
-    const { data, error } = await supabase
-      .from("articles")
-      .insert({
-        title: article.title || topic,
-        slug: slugify(article.title || topic),
-        summary: article.summary,
-        content: article.content,
-        category: article.category,
-        tags: article.tags || [],
-        article_type: body.article_type,
-        tone: body.tone,
-        length_type: body.length_type,
-        status: "review",
-        quality_score: review.quality_score,
-        ai_risk_score: review.ai_risk_score,
-        sensitive_risk_score: review.sensitive_risk_score,
-        cover_prompt: article.cover_prompt || "",
-        source_input: [topic, body.material].filter(Boolean).join("\n\n")
-      })
-      .select()
-      .single();
-    if (error) throw error;
+    const data = await createArticle({
+      title: article.title || topic,
+      slug: slugify(article.title || topic),
+      summary: article.summary,
+      content: article.content,
+      category: article.category,
+      tags: article.tags || [],
+      article_type: body.article_type,
+      tone: body.tone,
+      length_type: body.length_type,
+      status: "review",
+      quality_score: review.quality_score,
+      ai_risk_score: review.ai_risk_score,
+      sensitive_risk_score: review.sensitive_risk_score,
+      cover_prompt: article.cover_prompt || "",
+      source_input: [topic, body.material].filter(Boolean).join("\n\n")
+    });
 
-    await logStep({
+    await createGenerationLog({
       batch_id: batchId,
       article_id: data.id,
       step: "保存",
@@ -149,7 +121,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "文章生成失败";
-    await logStep({
+    await createGenerationLog({
       batch_id: batchId,
       step: "失败",
       status: "failed",

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callLLM } from "@/lib/llm";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getArticle } from "@/lib/store";
 
 const actionPrompts: Record<string, string> = {
   title: "请为这篇文章优化标题，给出 5 个克制、清晰、不营销的中文标题，只输出列表。",
@@ -22,13 +22,8 @@ export async function POST(
     const prompt = actionPrompts[action];
     if (!prompt) throw new Error("未知优化动作。");
 
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase
-      .from("articles")
-      .select("title, summary, content")
-      .eq("id", id)
-      .single();
-    if (error) throw error;
+    const data = await getArticle(id);
+    if (!data) throw new Error("文章不存在。");
 
     const result = await callLLM([
       {
